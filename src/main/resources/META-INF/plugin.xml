@@ -1,0 +1,17 @@
+<!-- Plugin Configuration File. Read more: https://plugins.jetbrains.com/docs/intellij/plugin-configuration-file.html -->
+<idea-plugin>
+    <id>com.github.dvranes1.deploymentplugin</id>
+    <name>DeploymentPlugin</name>
+    <vendor>dvranes1</vendor>
+
+    <depends>com.intellij.modules.platform</depends>
+    <depends>JavaScript</depends>
+
+    <resource-bundle>messages.MyBundle</resource-bundle>
+
+    <extensions defaultExtensionNs="com.intellij">
+        <toolWindow factoryClass="com.github.dvranes1.deploymentplugin.UI.DeployToolWindowFactory" id="Deploy" anchor="right" icon="/icons/deployIcon.png"/>
+        <postStartupActivity implementation="com.github.dvranes1.deploymentplugin.startup.MyProjectActivity" />
+        <javasript.webTypes source = "alpine.web-types.json" enableByDefault = "true"/>
+    </extensions>
+</idea-plugin>

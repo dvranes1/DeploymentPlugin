@@ -1,0 +1,14 @@
+{
+  "$schema": "../../../../schema.json",
+  "name": "Alpine",
+  "version": "1.0.0",
+  "contributions": {
+    "html": {
+      "attributes": [
+        {
+          "name": "x-data"
+        }
+      ]
+    }
+  }
+}
