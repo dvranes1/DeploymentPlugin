@@ -61,17 +61,18 @@ private class DeployToolWindowPanel(private val project: Project) : JBPanel<Depl
                     // opcionalno: možeš logovati da je kliknuto, ili update UI
                 },
                 onAiSuggestionReady = { file, line0, col0, suggestion ->
-                    // Najbolje: uvek otvori editor baš za taj fajl/poziciju (ne oslanjaj se na selectedTextEditor)
-                    if (file == null) return@DeployErrorHyperlinkFilter
+                    if(file != null) {
+                        ApplicationManager.getApplication().invokeLater {
+                            val descriptor = OpenFileDescriptor(project, file, line0, col0)
 
-                    ApplicationManager.getApplication().invokeLater {
-                        val descriptor = OpenFileDescriptor(project, file, line0, col0)
+                            val editor = FileEditorManager.getInstance(project)
+                                .openTextEditor(descriptor, true)
+                                ?: return@invokeLater
 
-                        val editor = FileEditorManager.getInstance(project)
-                            .openTextEditor(descriptor, true)
-                            ?: return@invokeLater
-
-                        showAiBalloonAtEditor(editor, line0, col0, suggestion)
+                            showAiBalloonAtEditor(editor, line0, col0, suggestion)
+                        }
+                    }else{
+                        showAiBalloonInToolWindow(suggestion)
                     }
                 }
             )
@@ -111,11 +112,10 @@ private class DeployToolWindowPanel(private val project: Project) : JBPanel<Depl
         Timer(900) {
             i++
 
-            // povremeno baci error liniju u formatu koji filter hvata:
             if (i == 4) {
                 // Zameni putanju realnom sa tvog projekta kad budeš testirao (ili ostavi za demo)
                 console.print(
-                    "C:\\Users\\Danilo\\WebstormProjects\\untitled\\index.js:14:10 - Unexpected token ';'\n",
+                    "Deploy failed: Unauthorized (missing token)\n",
                     ConsoleViewContentType.ERROR_OUTPUT
                 )
                 healthLabel.text = "Health: ❌ Error"
@@ -168,6 +168,32 @@ private class DeployToolWindowPanel(private val project: Project) : JBPanel<Depl
 
         balloon.show(RelativePoint(editor.contentComponent, xy), pos)
     }
+
+    private fun showAiBalloonInToolWindow(text: String) {
+        val content = JBPanel<JBPanel<*>>(BorderLayout(8, 8)).apply {
+            border = JBUI.Borders.empty(10)
+            add(JBLabel("<html><b>AI suggestion</b></html>"), BorderLayout.NORTH)
+            add(JBTextArea(text).apply {
+                lineWrap = true
+                wrapStyleWord = true
+                isEditable = false
+                columns = 36
+                rows = 6
+            }, BorderLayout.CENTER)
+        }
+
+        val balloon = JBPopupFactory.getInstance()
+            .createBalloonBuilder(content)
+            .setHideOnClickOutside(true)
+            .setHideOnKeyOutside(true)
+            .setCloseButtonEnabled(true)
+            .createBalloon()
+
+        // anchor: console komponenta u toolwindow-u
+        balloon.show(RelativePoint.getSouthWestOf(consoleComponent), Balloon.Position.above)
+    }
+
+
 
 
 
