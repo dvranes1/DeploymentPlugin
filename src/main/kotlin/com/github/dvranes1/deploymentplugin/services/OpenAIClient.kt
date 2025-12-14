@@ -11,9 +11,8 @@ import javax.swing.SwingUtilities
 object OpenAIClient {
 
     private val client = OkHttpClient()
-    private val OPEN_AI_API_KEY = "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"
+    val openAiKey = System.getenv("OPENAI_API_KEY")
     fun send(prompt: String, onResult: (String) -> Unit) {
-        println("Usao u send prompt!")
 
         AppExecutorUtil.getAppExecutorService().submit {
             try {
@@ -26,7 +25,7 @@ object OpenAIClient {
 
                 val request = Request.Builder()
                     .url("https://api.openai.com/v1/chat/completions")
-                    .header("Authorization", "Bearer $OPEN_AI_API_KEY")
+                    .header("Authorization", "Bearer $openAiKey")
                     .post(payload.toString().toRequestBody("application/json".toMediaType()))
                     .build()
 
