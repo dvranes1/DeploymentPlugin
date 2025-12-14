@@ -1,5 +1,6 @@
 package com.github.dvranes1.deploymentplugin.UI
 
+import com.github.dvranes1.deploymentplugin.services.StacktraceService
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.wm.ToolWindow
 import com.intellij.openapi.wm.ToolWindowFactory
@@ -50,6 +51,8 @@ private class DeployToolWindowPanel(private val project: Project) : JBPanel<Depl
     // BOTTOM: redeploy / stop
     private val redeployButton = JButton("Redeploy…")
     private val stopButton = JButton("Stop")
+
+    //val stackTraceService = StacktraceService(project);
 
     init {
         val aiClient: AiClient = DemoAiClient()
@@ -115,7 +118,7 @@ private class DeployToolWindowPanel(private val project: Project) : JBPanel<Depl
             if (i == 4) {
                 // Zameni putanju realnom sa tvog projekta kad budeš testirao (ili ostavi za demo)
                 console.print(
-                    "Deploy failed: Unauthorized (missing token)\n",
+                    "at MyClass.myMethod(index.js:1:1)\n",
                     ConsoleViewContentType.ERROR_OUTPUT
                 )
                 healthLabel.text = "Health: ❌ Error"

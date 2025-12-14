@@ -1,7 +1,9 @@
 package com.github.dvranes1.deploymentplugin.UI
 
+import com.github.dvranes1.deploymentplugin.services.StacktraceService
 import com.intellij.execution.filters.Filter
 import com.intellij.execution.filters.HyperlinkInfo
+import com.intellij.icons.AllIcons.Actions.Regex
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.fileEditor.FileDocumentManager
 import com.intellij.openapi.fileEditor.OpenFileDescriptor
@@ -27,6 +29,14 @@ data class ParseResult(
     val clickableRangeInLine: IntRange
 )
 
+data class StackFrame(
+        val filePath: String,
+        val line: Int,
+        val column: Int?,
+        val functionName: String?,
+        val rawLine: String
+)
+
 interface AiClient {
     fun suggestFix(
         filePath: String,
@@ -36,6 +46,7 @@ interface AiClient {
         context: String?
     ): String
 }
+
 
 private fun parseGeneralError(line: String): GeneralErrorResult? {
     val trimmed = line.trim()
@@ -94,67 +105,32 @@ class DeployErrorHyperlinkFilter(
     private val onOpenLocation: (file: VirtualFile?, line0: Int, col0: Int) -> Unit,
     private val onAiSuggestionReady: (file: VirtualFile?, line0: Int, col0: Int, suggestion: String) -> Unit
 ) : Filter {
-
+    private val stacktraceService = StacktraceService(project)
     override fun applyFilter(line: String, entireLength: Int): Filter.Result? {
-        val parsed = parseAnyError(line)
-
-        if (parsed != null) {
-            val lineStartOffset = entireLength - line.length
-            val startOffset = lineStartOffset + parsed.clickableRangeInLine.first
-            val endOffset = lineStartOffset + parsed.clickableRangeInLine.last + 1
-
-            val hyperlink = HyperlinkInfo { _ ->
-                val loc = parsed.loc
-                val file = resolveFile(project, loc.filePath)
-
-                val line0 = (loc.line1 - 1).coerceAtLeast(0)
-                val col0 = (loc.col1 - 1).coerceAtLeast(0)
-
-                if (file != null) {
-                    OpenFileDescriptor(project, file, line0, col0).navigate(true)
-                }
-                onOpenLocation(file, line0, col0)
-
-                AppExecutorUtil.getAppExecutorService().submit {
-                    val context = if (file != null) extractContext(file, loc.line1) else null
-                    val suggestion = aiClient.suggestFix(
-                        filePath = loc.filePath,
-                        line = loc.line1,
-                        col = loc.col1,
-                        errorMessage = loc.message,
-                        context = context
-                    )
-                    ApplicationManager.getApplication().invokeLater {
-                        onAiSuggestionReady(file, line0, col0, suggestion)
-                    }
-                }
-            }
-
-            return Filter.Result(listOf(Filter.ResultItem(startOffset, endOffset, hyperlink)))
-        }
-
-        // CASE 2: opšta greška (nema file/line/col) -> klik => AI bubble u toolwindow-u
-        val general = parseGeneralError(line) ?: return null
+        val parsed = parseAnyError(line) ?: return null
+        val loc = parsed.loc
 
         val lineStartOffset = entireLength - line.length
-        val startOffset = lineStartOffset + general.clickableRangeInLine.first
-        val endOffset = lineStartOffset + general.clickableRangeInLine.last + 1
+        val startOffset = lineStartOffset + parsed.clickableRangeInLine.first
+        val endOffset = lineStartOffset + parsed.clickableRangeInLine.last + 1
 
         val hyperlink = HyperlinkInfo { _ ->
-            onOpenLocation(null, 0, 0)
-
-            AppExecutorUtil.getAppExecutorService().submit {
-                val suggestion = aiClient.suggestFix(
-                    filePath = "<no-file>",
-                    line = 0,
-                    col = 0,
-                    errorMessage = general.message,
-                    context = null
+            stacktraceService.onStackFrame(
+                StackFrame(
+                    filePath = loc.filePath,
+                    line = loc.line1,
+                    column = loc.col1,
+                    functionName = null,
+                    rawLine = line
                 )
-                ApplicationManager.getApplication().invokeLater {
-                    onAiSuggestionReady(null, 0, 0, suggestion)
-                }
+            )
+
+            // Navigacija do fajla ako postoji
+            resolveFile(project, loc.filePath)?.let { file ->
+                OpenFileDescriptor(project, file, loc.line1 - 1, loc.col1 - 1).navigate(true)
             }
+
+            stacktraceService.onNonFrameLine(line)
         }
 
         return Filter.Result(listOf(Filter.ResultItem(startOffset, endOffset, hyperlink)))
