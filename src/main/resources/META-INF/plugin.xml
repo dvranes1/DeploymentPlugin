@@ -10,7 +10,7 @@
     <resource-bundle>messages.MyBundle</resource-bundle>
 
     <extensions defaultExtensionNs="com.intellij">
-        <toolWindow factoryClass="com.github.dvranes1.deploymentplugin.UI.DeployToolWindowFactory" id="Deploy" anchor="right" icon="/icons/deployIcon.png"/>
+        <toolWindow factoryClass="com.github.dvranes1.deploymentplugin.toolwindow.DeployToolWindowFactory" id="Deploy" anchor="right" icon="/icons/deployIcon.png"/>
         <postStartupActivity implementation="com.github.dvranes1.deploymentplugin.startup.MyProjectActivity" />
         <javasript.webTypes source = "alpine.web-types.json" enableByDefault = "true"/>
     </extensions>
